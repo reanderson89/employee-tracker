@@ -164,12 +164,50 @@ const addEmployee = () => {
         },
         {
             type: "input",
-            name: "mangerId",
+            name: "managerId",
             message: "What manager ID is this employee associated with?"
         }
+     ]).then((data) => {
+          // add validation incase role_id already exists, don't add data, repeat prompts.
+        console.log(`First Name: ${data.firstName}\nLast Name: ${data.lastName}\nRole ID: ${data.roleId}\nAssociated Manager ID: ${data.managerId}`);
+        verifyEmployee(data.firstName, data.lastName, data.roleId, data.managerId);
+     })
+};
 
-    ]).then
-}
+const verifyEmployee = (first, last, roleId, managerId) => {
+    inquirer.prompt([
+        {
+            type: "confirm",
+            name: "checkEmployee",
+            message: "Is the above information correct?"
+        }
+    ]).then((data) => {
+        if (data.checkEmployee === true){
+            // add employee to employee_DB
+            console.log(`${first} ${last} has been added.`);
+            addAnotherEmployee();
+        } else {
+            console.log("No worries! Please try again.")
+            addEmployee();
+        }
+    })
+};
+
+const addAnotherEmployee = () => {
+    inquirer.prompt([
+        {
+            type: "confirm",
+            name: "anotherEmployee",
+            message: "Would you like to add another employee?"
+        }
+    ]).then((data) => {
+        if (data.anotherEmployee === true) {
+            addEmployee();
+        } else {
+            employeeTracker();
+        }
+    })
+};
 
 
 
