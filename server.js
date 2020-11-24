@@ -115,7 +115,7 @@ const verifyDepartment = (newDep) => {
                 if (err) throw err;
                 // console.log(`"${newDep}" department has been added.`);
             });
-            connection.query("SELECT id, name FROM department WHERE name=?", [newDep], (err,res) => {
+            connection.query("SELECT * FROM department WHERE name=?", [newDep], (err,res) => {
                 if (err) throw err;
                 console.log(`"${newDep}" department has been added.`);
                 console.table(res);
@@ -192,9 +192,13 @@ const verifyRole = (role, salary, depId) => {
         // add role to employee_DB
         connection.query("INSERT INTO role (title, salary, department_id) VALUES (?,?,?)", [role, salary, depId], (err,res) => {
             if (err) throw err;
+        });
+        connection.query("SELECT * FROM role WHERE title=?", [role], (err,res) => {
+            if (err) throw err;
             console.log(`"${role}" role has been added.`);
+            console.table(res);
             addAnotherRole();
-        })
+        });
       } else {
         console.log("No worries! Please try again.");
         addRole();
@@ -268,14 +272,24 @@ const verifyEmployee = (first, last, roleId, managerId) => {
       },
     ])
     .then((data) => {
-      if (data.checkEmployee === true) {
-        // add employee to employee_DB
-        console.log(`"${first} ${last}" has been added.`);
-        addAnotherEmployee();
-      } else {
-        console.log("No worries! Please try again.");
-        addEmployee();
-      }
+        if (data.checkEmployee === true) {
+            // add role to employee_DB
+            connection.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [first, last, roleId, managerId], (err,res) => {
+                if (err) throw err;
+                console.log(`"${first} ${last}" has been added.`);
+                addAnotherEmployee();
+
+            });
+            // connection.query("SELECT * FROM employee WHERE id=?", [employee.id], (err,res) => {
+            //     if (err) throw err;
+            //     console.log(`"${first} ${last}" has been added.`);
+            //     console.table(res);
+            //     addAnotherEmployee();
+            // });
+          } else {
+            console.log("No worries! Please try again.");
+            addEmployee();
+          }
     });
 };
 
@@ -320,5 +334,7 @@ const viewEmployee = () => {
     employeeTracker();
   });
 };
+
+// for updating I will need to make an inquirer that asks who they want to update and then shows a table of either the employee, role or department they wish to update and then once they can see the id to use I will get that information from them in another inquirer prompt so that I can run it against the database.
 
 employeeTracker();
