@@ -74,6 +74,7 @@ const employeeTracker = () => {
           viewEmployee();
           break;
         case "All Done":
+            console.log("Database has been updated.")
           connection.end();
           return;
           break;
@@ -95,7 +96,7 @@ const addDepartment = () => {
       },
     ])
     .then((data) => {
-      console.log(`${data.newDepartment} department has been added.`);
+      console.log(`"${data.newDepartment}" department has been added.`);
       addAnotherDepartment();
     });
 };
@@ -158,10 +159,7 @@ const verifyRole = (role, salary, depId) => {
     .then((data) => {
       if (data.checkRole === true) {
         // add role to employee_DB
-        console.log(
-          `This is to check if the information has been passed successfully: ${role}, ${salary}, ${depId}`
-        );
-        console.log("Role has been added.");
+        console.log(`"${role}" has been added.`);
         addAnotherRole();
       } else {
         console.log("No worries! Please try again.");
@@ -238,7 +236,7 @@ const verifyEmployee = (first, last, roleId, managerId) => {
     .then((data) => {
       if (data.checkEmployee === true) {
         // add employee to employee_DB
-        console.log(`${first} ${last} has been added.`);
+        console.log(`"${first} ${last}" has been added.`);
         addAnotherEmployee();
       } else {
         console.log("No worries! Please try again.");
