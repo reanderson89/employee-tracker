@@ -96,8 +96,37 @@ const addDepartment = () => {
       },
     ])
     .then((data) => {
-      console.log(`"${data.newDepartment}" department has been added.`);
-      addAnotherDepartment();
+      console.log(`Department: ${data.newDepartment}`);
+      verifyDepartment(data.newDepartment);
+    });
+};
+
+const verifyDepartment = (newDep) => {
+    inquirer.prompt([
+        {
+            type:'confirm',
+            name: "depCheck",
+            message: "Is the above information correct?"
+        }
+    ]).then((data) => {
+        if (data.depCheck === true) {
+            // add department to employee_DB
+            connection.query("INSERT INTO department (name) VALUES (?)", [newDep], (err,res) => {
+                if (err) throw err;
+                // console.log(`"${newDep}" department has been added.`);
+            });
+            connection.query("SELECT id, name FROM department WHERE name=?", [newDep], (err,res) => {
+                if (err) throw err;
+                console.log(`"${newDep}" department has been added.`);
+                console.table(res);
+                addAnotherDepartment();
+            });
+            // console.log(`"${newDep}" department has been added.`);
+            // addAnotherDepartment();
+          } else {
+            console.log("No worries! Please try again.");
+            addDepartment();
+          }
     });
 };
 
@@ -118,6 +147,8 @@ const addAnotherDepartment = () => {
       }
     });
 };
+
+
 
 const addRole = () => {
   inquirer
@@ -159,8 +190,11 @@ const verifyRole = (role, salary, depId) => {
     .then((data) => {
       if (data.checkRole === true) {
         // add role to employee_DB
-        console.log(`"${role}" has been added.`);
-        addAnotherRole();
+        connection.query("INSERT INTO role (title, salary, department_id) VALUES (?,?,?)", [role, salary, depId], (err,res) => {
+            if (err) throw err;
+            console.log(`"${role}" role has been added.`);
+            addAnotherRole();
+        })
       } else {
         console.log("No worries! Please try again.");
         addRole();
