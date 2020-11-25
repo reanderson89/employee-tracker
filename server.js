@@ -2,6 +2,7 @@ const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
 const colors = require("colors");
+const { Console } = require("console");
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -23,6 +24,12 @@ var connection = mysql.createConnection({
 
 //   * Update employee roles
 
+const welcome = () => {
+    console.log("Welcome to Employee Tracker! We have created a Managers Department,\nManagers Role, and an example Manager for you to start with. \nPlease feel free to update the 'Salary' for the manager role \nand view the different areas to get better acquainted with the application.".blue)
+    console.log("When adding to the database it is recommended that you follow these steps...\n1: Create a Department first\n2: If that Department has a manager use the 'Add Manager' feature to add them\n3: Create the roles for that department using the 'Add Roles' feature\n4: Create the employees using the 'Add Employee' feature".green);
+    employeeTracker();
+};
+
 const employeeTracker = () => {
   inquirer
     .prompt([
@@ -43,8 +50,15 @@ const employeeTracker = () => {
         type: "list",
         name: "userSelection",
         message: "Who or what would you like to view?",
-        choices: ["View Departments", "View Roles", "View Employees", "View Managers", "View Employees by Manager ID", "View Utilized Budget by Department"],
+        choices: ["View Departments", "View Roles", "View Employees", "View Employees by Manager ID", "View Utilized Budget by Department"],
         when: (data) => data.userRoute === "View",
+      },
+      {
+        type: "list",
+        name: "userSelection",
+        message: "Who or what would you like to update?",
+        choices: ["Update Employee", "Update Salary by Role"],
+        when: (data) => data.userRoute === "Update",
       },
       {
         type: "list",
@@ -77,17 +91,17 @@ const employeeTracker = () => {
         case "View Employees":
           viewEmployee();
           break;
-          case "View Managers":
-          viewManager();
-          break;
           case "View Employees by Manager ID":
             viewEmployeesByManager();
             break;
             case "View Utilized Budget by Department":
             viewDepartmentBudget();
             break;
-        case "Update":
+        case "Update Employee":
           updateEmployee();
+          break;
+          case "Update Salary by Role":
+          updateSalaryByRole();
           break;
           case "Delete Department":
           deleteDepartment();
@@ -317,7 +331,7 @@ const addManager = () => {
                 choices: res.map(el => ({ value: el.role_id, name: el.title }))
             },
         ]).then((data) => {
-            connection.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [data.firstName, data.lastName, data.role_id, 0], (err,res) => {
+            connection.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [data.firstName, data.lastName, data.role_id, 1], (err,res) => {
                 if (err) throw err;
                 console.log(`"${data.firstName} ${data.lastName}" has been added as a manager. \n Employee ID#: ${res.insertId} will be used to associate employees to them.`.green);
                 employeeTracker();
@@ -329,7 +343,7 @@ const addManager = () => {
 const addEmployee = () => {
     connection.query("SELECT * FROM role", (err, res) => {
         if (err) throw err;
-        connection.query("SELECT * FROM employee WHERE manager_id = 0", (err, result) => {
+        connection.query("SELECT * FROM employee WHERE manager_id = 1", (err, result) => {
             if (err) throw err;
         
   inquirer
@@ -452,14 +466,6 @@ const viewEmployee = () => {
   });
 };
 
-const viewManager = () => {
-    connection.query("SELECT * FROM employee INNER JOIN role ON employee.role_id = role.role_id WHERE manager_id=0", (err, res) => {
-        if (err) throw err;
-        console.table(res);
-        employeeTracker();
-      });
-}
-
 const viewEmployeesByManager = () => {
     connection.query("SELECT * FROM employee", (err,res) => {
         if (err) throw err;
@@ -468,17 +474,11 @@ const viewEmployeesByManager = () => {
         {
             type: "list",
             name: "employeesWithManager",
-            message: "Please enter the Manager ID# of the employees you would like to see.",
-            choices: res.map(manager => manager.manager_id)
-            // validate: (data) => {
-            //     if (data === "" || isNaN(data)){
-            //         return "Please enter the ID".brightRed;
-            //     } 
-            //         return true; 
-            // },
+            message: "Please choose the manager you would like to see the employees of.",
+            choices: res.map(manager => ({ value: manager.employee_id, name: `${manager.first_name} ${manager.last_name}`}))
         }
     ]).then((data) => {
-        connection.query("SELECT * FROM employee where manager_id = ?", [data.employeesWithManager], (err,res) => {
+        connection.query("SELECT * FROM employee INNER JOIN role ON employee.role_id = role.role_id WHERE manager_id = ?", [data.employeesWithManager], (err,res) => {
             if (err) throw err;
             console.table(res);
             employeeTracker();
@@ -522,14 +522,6 @@ const viewDepartmentBudget = () => {
 const updateEmployee = () => {
    connection.query("SELECT * FROM employee", (err, res) => {
        if (err) throw err;
-       let employeeNames = res.map((el) => {
-           return el;
-       });
-       let employeeIDs = res.map((el) => {
-        return el.employee_id;
-       });
-        console.table(res);
-        console.log("Please use the above table to find the corresponding employee by their ID".green)
        inquirer.prompt([
            {
                type: "list",
@@ -567,7 +559,43 @@ const updateEmployee = () => {
        });
    });
    
-}
+};
+
+const updateSalaryByRole = () => {
+    connection.query("SELECT * FROM role", (err, res) => {
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "selectRole",
+                message: "Which role would you like to update?",
+                choices: res.map(el => ({ value: el.role_id, name: el.title}))
+            },
+            {
+                type: "input",
+                name: "updatedSalary",
+                message: "What is the salary of this role?(DO NOT USE COMMAS)",
+                validate: (data) => {
+                    if (data.indexOf(',') > -1) {
+                        return "Please do not use commas.".brightRed;
+                    } else if (data === ""){
+                        return "Please enter a salary.".brightRed;
+                    } else if (isNaN(data)){
+                        return "Please enter a number value.".brightRed;
+                    }
+                    return true;
+                },
+              },
+        ]).then((data) => {
+            connection.query("UPDATE role SET salary=? WHERE role_id=?",[data.updatedSalary, data.selectRole], (err,res) => {
+                if (err) throw err;
+                console.log("Salary has been updated.".green)
+                employeeTracker();
+            })
+        });    
+    });
+    
+ }
 
 const updateEmployeeRoleId = (empId, roleChoices) => {
     
@@ -577,13 +605,6 @@ const updateEmployeeRoleId = (empId, roleChoices) => {
                 name: "newRoleId",
                 message: 'What new Role ID would you like to assign?',
                 choices: roleChoices
-                // validate: (data) => {
-                //     const number = data.match(/^[1-9]\d*$/);
-                //     if (data === "" || data != number){
-                //         return "Please enter new Role ID".brightRed;
-                //     } 
-                //         return true; 
-                // },
             }
         ]).then((data) => {
             connection.query("UPDATE employee SET role_id = ? WHERE employee_id = ?", [data.newRoleId, empId], (err, res) => {
@@ -598,7 +619,7 @@ const updateEmployeeRoleId = (empId, roleChoices) => {
 })};
 
 const updateEmployeeManagerId = (empId) => {
-    connection.query("SELECT * FROM employee WHERE manager_id = 0", (err,res) => {
+    connection.query("SELECT * FROM employee WHERE manager_id = 1", (err,res) => {
 
     
     inquirer.prompt([
@@ -607,12 +628,6 @@ const updateEmployeeManagerId = (empId) => {
             name: "newManagerId",
             message: 'What Manager would you like to assign?',
             choices: res.map(el => ({value: el.employee_id, name: `${el.first_name} ${el.last_name}`}))
-            // validate: (data) => {
-            //     if (data === "" || isNaN(data)){
-            //         return "Please enter new Manager ID".brightRed;
-            //     } 
-            //         return true; 
-            // },
         }
     ]).then((data) => {
         connection.query("UPDATE employee SET manager_id = ? WHERE employee_id = ?", [data.newManagerId, empId], (err, res) => {
@@ -739,4 +754,4 @@ const deleteEmployee = () => {
     
 };
 
-employeeTracker();
+welcome();
