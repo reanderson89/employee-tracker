@@ -6,7 +6,7 @@ USE employee_DB;
 
 -- * **department**:
 CREATE TABLE department (
-id INT AUTO_INCREMENT PRIMARY KEY,
+department_id INT AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(30)
 );
 --   * **id** - INT PRIMARY KEY
@@ -14,7 +14,7 @@ name VARCHAR(30)
 
 -- * **role**:
 CREATE TABLE role (
-id INT AUTO_INCREMENT PRIMARY KEY,
+role_id INT AUTO_INCREMENT PRIMARY KEY,
 title VARCHAR(30),
 salary DECIMAL,
 department_id INT
@@ -26,7 +26,7 @@ department_id INT
 
 -- * **employee**:
 CREATE TABLE employee (
-id INT AUTO_INCREMENT PRIMARY KEY,
+employee_id INT AUTO_INCREMENT PRIMARY KEY,
 first_name VARCHAR(30),
 last_name VARCHAR(30),
 role_id INT,
@@ -40,5 +40,11 @@ manager_id INT
 
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
 VALUES("Robert", "Anderson", 1, 4);
+
+INSERT INTO role (title, salary, department_id)
+VALUES ("Baker", 45.000, 5);
+
+INSERT INTO department (name)
+VALUES ("Morning Crew");
 
 SELECT * FROM employee;

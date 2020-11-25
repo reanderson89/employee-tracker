@@ -73,6 +73,9 @@ const employeeTracker = () => {
         case "View Employees":
           viewEmployee();
           break;
+        case "Update Employees":
+          updateEmployee();
+          break;
         case "All Done":
             console.log("Database has been updated.")
           connection.end();
@@ -276,9 +279,8 @@ const verifyEmployee = (first, last, roleId, managerId) => {
             // add role to employee_DB
             connection.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [first, last, roleId, managerId], (err,res) => {
                 if (err) throw err;
-                console.log(`"${first} ${last}" has been added.`);
+                console.log(`"${first} ${last}" has been added. \n Employee ID#: ${res.insertId}.`);
                 addAnotherEmployee();
-
             });
             // connection.query("SELECT * FROM employee WHERE id=?", [employee.id], (err,res) => {
             //     if (err) throw err;
@@ -336,5 +338,92 @@ const viewEmployee = () => {
 };
 
 // for updating I will need to make an inquirer that asks who they want to update and then shows a table of either the employee, role or department they wish to update and then once they can see the id to use I will get that information from them in another inquirer prompt so that I can run it against the database.
+const updateEmployee = () => {
+   connection.query("SELECT * FROM employee", (err, res) => {
+       if (err) throw err;
+       let employeeNames = res.map((el) => {
+           return el;
+       });
+       let employeeIDs = res.map((el) => {
+        return el.employee_id;
+       });
+        console.table(res);
+        console.log("Please use the table above to find the corresponding employee by their ID")
+       inquirer.prompt([
+           {
+               type: "list",
+               name: "selectEmployee",
+               message: "Which employee would you like to update?",
+               choices: employeeIDs
+           },
+           {
+               type: "list",
+               name: "updateChoice",
+               message: 'What would you like to update?',
+               choices: ['Role ID', 'Manager ID']
+           }
+       ]).then((data) => {
+           let empId = data.selectEmployee;
+           connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
+            if (err) throw err;
+            console.log("Current employee information")
+            console.table(res);
+        });
+           if(data.updateChoice === "Role ID") {
+            connection.query("SELECT * FROM role", (err, res) => {
+                if (err) throw err;
+                console.log("Current Roles in the system.");
+                console.table(res);
+                updateEmployeeRoleId(empId);
+            })
+           } else {
+               updateEmployeeManagerId(empId);
+           }
+       });
+   });
+   
+}
+
+const updateEmployeeRoleId = (empId) => {
+    
+        inquirer.prompt([
+            {
+                type:'input',
+                name: "newRoleId",
+                message: 'What new Role ID would you like to assign?'
+            }
+        ]).then((data) => {
+            connection.query("UPDATE employee SET role_id = ? WHERE employee_id = ?", [data.newRoleId, empId], (err, res) => {
+                if (err) throw err;
+            });
+            connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
+                if (err) throw err;
+                console.log("Updated employee information");
+                console.table(res);
+                updateAgain();      
+    });
+})}
+
+const updateAgain = () => {
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: "updateAgain",
+            message: "What would you like to do?",
+            choices: ["Update another employee", "Back to the main menu", "All Done"]
+        }
+    ]).then((data) => {
+        if(data.updateAgain === "Update another employee") {
+            updateEmployee();
+        } else if (data.updateAgain === "Back to the main menu") {
+            employeeTracker();
+        } else {
+            console.log("Database has been updated.")
+            connection.end();
+            return;  
+        }
+    })
+}
+
 
 employeeTracker();
