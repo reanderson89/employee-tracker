@@ -1,6 +1,7 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
+const colors = require("colors");
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -29,7 +30,7 @@ const employeeTracker = () => {
         type: "list",
         name: "userRoute",
         message: "What would you like to do?",
-        choices: ["Add", "View", "Update", "All Done"],
+        choices: ["Add", "View", "Update", "Delete", "All Done"],
       },
       {
         type: "list",
@@ -42,15 +43,15 @@ const employeeTracker = () => {
         type: "list",
         name: "userSelection",
         message: "Who or what would you like to view?",
-        choices: ["View Departments", "View Roles", "View Employees"],
+        choices: ["View Departments", "View Roles", "View Employees", "View Employees by Manager ID"],
         when: (data) => data.userRoute === "View",
       },
       {
         type: "list",
         name: "userSelection",
-        message: "Who or what would you like to update?",
-        choices: ["Update Departments", "Update Roles", "Update Employees"],
-        when: (data) => data.userRoute === "Update",
+        message: "Who or what would you like to delete?",
+        choices: ["Delete Department", "Delete Role", "Delete Employee"],
+        when: (data) => data.userRoute === "Delete",
       },
     ])
     .then((data) => {
@@ -73,11 +74,23 @@ const employeeTracker = () => {
         case "View Employees":
           viewEmployee();
           break;
-        case "Update Employees":
+          case "View Employees by Manager ID":
+            viewEmployeesByManager();
+            break;
+        case "Update":
           updateEmployee();
           break;
+          case "Delete Department":
+          deleteDepartment();
+          break;
+          case "Delete Role":
+          deleteRole();
+          break;
+          case "Delete Employee":
+          deleteEmployee();
+          break;
         case "All Done":
-            console.log("Database has been updated.")
+            console.log("Database has been updated.".green);
           connection.end();
           return;
           break;
@@ -96,10 +109,17 @@ const addDepartment = () => {
         type: "input",
         name: "newDepartment",
         message: "What department would you like to add?",
+        validate: (data) => {
+            const number = data.match(/^[1-9]\d*$/);
+            if (data === ""){
+                return "Please enter the department you would like to add".brightRed;
+            } 
+                return true; 
+        },
       },
     ])
     .then((data) => {
-      console.log(`Department: ${data.newDepartment}`);
+      console.log(`Department: ${data.newDepartment}`.green);
       verifyDepartment(data.newDepartment);
     });
 };
@@ -120,7 +140,7 @@ const verifyDepartment = (newDep) => {
             });
             connection.query("SELECT * FROM department WHERE name=?", [newDep], (err,res) => {
                 if (err) throw err;
-                console.log(`"${newDep}" department has been added.`);
+                console.log(`"${newDep}" department has been added.`.green);
                 console.table(res);
                 addAnotherDepartment();
             });
@@ -160,22 +180,47 @@ const addRole = () => {
         type: "input",
         name: "newRole",
         message: "What is the title of this role?",
+        validate: (data) => {
+            if (data === ""){
+                return "Please enter the title of the role".brightRed;
+            } 
+                return true; 
+        },
       },
       {
         type: "input",
         name: "roleSalary",
-        message: "What is the salary of this role?",
+        message: "What is the salary of this role?(DO NOT USE COMMAS)",
+        validate: (data) => {
+            if (data.indexOf(',') > -1) {
+                return "Please do not use commas.".brightRed;
+            } else if (data === ""){
+                return "Please enter a salary.".brightRed;
+            } else if (isNaN(data)){
+                return "Please enter a number value.".brightRed;
+            }
+            return true;
+        },
       },
       {
         type: "input",
         name: "newDepId",
         message: "What is the department ID that this role is associated with?",
+        validate: (data) => {
+            if (data.indexOf(',') > -1) {
+                return "Please do not use commas.".brightRed;
+            } else if (data === ""){
+                return "Please enter an ID.".brightRed;
+            } else if (isNaN(data)){
+                return "Please enter a number value.".brightRed;
+            }
+            return true;
+        },
       },
     ])
     .then((data) => {
-      // add validation incase role_id already exists, don't add data, repeat prompts.
       console.log(
-        `Role: ${data.newRole}\nSalary: ${data.roleSalary}\nAssociated Department ID: ${data.newDepId}`
+        `Role: ${data.newRole}\nSalary: ${data.roleSalary}\nAssociated Department ID: ${data.newDepId}`.green
       );
       verifyRole(data.newRole, data.roleSalary, data.newDepId);
     });
@@ -198,12 +243,12 @@ const verifyRole = (role, salary, depId) => {
         });
         connection.query("SELECT * FROM role WHERE title=?", [role], (err,res) => {
             if (err) throw err;
-            console.log(`"${role}" role has been added.`);
+            console.log(`"${role}" role has been added.`.green);
             console.table(res);
             addAnotherRole();
         });
       } else {
-        console.log("No worries! Please try again.");
+        console.log("No worries! Please try again.".blue);
         addRole();
       }
     });
@@ -234,27 +279,55 @@ const addEmployee = () => {
         type: "input",
         name: "firstName",
         message: "What is this employees first name?",
+        validate: (data) => {
+            const number = data.match(/^[1-9]\d*$/);
+            if (data === "" || data == number){
+                return "Please enter a first name".brightRed;
+            } 
+                return true; 
+        },
       },
       {
         type: "input",
         name: "lastName",
         message: "What is this employees last name?",
+        validate: (data) => {
+            const number = data.match(/^[1-9]\d*$/);
+            if (data === "" || data == number){
+                return "Please enter a last name".brightRed;
+            } 
+                return true; 
+        },
       },
       {
         type: "input",
         name: "roleId",
-        message: "What is this employees role ID?",
+        message: "What is this employees Role ID?",
+        validate: (data) => {
+            const number = data.match(/^[1-9]\d*$/);
+            if (data === "" || data != number){
+                return "Please enter a role ID".brightRed;
+            } 
+                return true; 
+        },
       },
       {
         type: "input",
         name: "managerId",
         message: "What manager ID is this employee associated with?",
+        validate: (data) => {
+            const number = data.match(/^[1-9]\d*$/);
+            if (data === "" || data != number){
+                return "Please enter manager ID, if they have no manager please put '0'".brightRed;
+            } 
+                return true; 
+        },
       },
     ])
     .then((data) => {
       // add validation incase role_id already exists, don't add data, repeat prompts.
       console.log(
-        `First Name: ${data.firstName}\nLast Name: ${data.lastName}\nRole ID: ${data.roleId}\nAssociated Manager ID: ${data.managerId}`
+        `First Name: ${data.firstName}\nLast Name: ${data.lastName}\nRole ID: ${data.roleId}\nAssociated Manager ID: ${data.managerId}`.green
       );
       verifyEmployee(
         data.firstName,
@@ -279,17 +352,11 @@ const verifyEmployee = (first, last, roleId, managerId) => {
             // add role to employee_DB
             connection.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [first, last, roleId, managerId], (err,res) => {
                 if (err) throw err;
-                console.log(`"${first} ${last}" has been added. \n Employee ID#: ${res.insertId}.`);
+                console.log(`"${first} ${last}" has been added. \n Employee ID#: ${res.insertId}.`.green);
                 addAnotherEmployee();
             });
-            // connection.query("SELECT * FROM employee WHERE id=?", [employee.id], (err,res) => {
-            //     if (err) throw err;
-            //     console.log(`"${first} ${last}" has been added.`);
-            //     console.table(res);
-            //     addAnotherEmployee();
-            // });
           } else {
-            console.log("No worries! Please try again.");
+            console.log("No worries! Please try again.".blue);
             addEmployee();
           }
     });
@@ -337,7 +404,30 @@ const viewEmployee = () => {
   });
 };
 
-// for updating I will need to make an inquirer that asks who they want to update and then shows a table of either the employee, role or department they wish to update and then once they can see the id to use I will get that information from them in another inquirer prompt so that I can run it against the database.
+const viewEmployeesByManager = () => {
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "employeesWithManager",
+            message: "Please enter the Manager ID# of the employees you would like to see.",
+            validate: (data) => {
+                const number = data.match(/^[1-9]\d*$/);
+                if (data === "" || data != number){
+                    return "Please enter the ID".brightRed;
+                } 
+                    return true; 
+            },
+        }
+    ]).then((data) => {
+        connection.query("SELECT * FROM employee where manager_id = ?", [data.employeesWithManager], (err,res) => {
+            if (err) throw err;
+            console.table(res);
+            employeeTracker();
+        });
+    });
+    
+};
+
 const updateEmployee = () => {
    connection.query("SELECT * FROM employee", (err, res) => {
        if (err) throw err;
@@ -348,7 +438,7 @@ const updateEmployee = () => {
         return el.employee_id;
        });
         console.table(res);
-        console.log("Please use the table above to find the corresponding employee by their ID")
+        console.log("Please use the above table to find the corresponding employee by their ID".green)
        inquirer.prompt([
            {
                type: "list",
@@ -364,20 +454,25 @@ const updateEmployee = () => {
            }
        ]).then((data) => {
            let empId = data.selectEmployee;
-           connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
-            if (err) throw err;
-            console.log("Current employee information")
-            console.table(res);
-        });
            if(data.updateChoice === "Role ID") {
+            connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
+                if (err) throw err;
+                console.log("Current employee information".green)
+                console.table(res);
+            });
             connection.query("SELECT * FROM role", (err, res) => {
                 if (err) throw err;
-                console.log("Current Roles in the system.");
+                console.log("Current Roles in the system.".green);
                 console.table(res);
                 updateEmployeeRoleId(empId);
             })
            } else {
-               updateEmployeeManagerId(empId);
+            connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
+                if (err) throw err;
+                console.log("Current employee information".green)
+                console.table(res);
+                updateEmployeeManagerId(empId);
+            });
            }
        });
    });
@@ -390,7 +485,14 @@ const updateEmployeeRoleId = (empId) => {
             {
                 type:'input',
                 name: "newRoleId",
-                message: 'What new Role ID would you like to assign?'
+                message: 'What new Role ID would you like to assign?',
+                validate: (data) => {
+                    const number = data.match(/^[1-9]\d*$/);
+                    if (data === "" || data != number){
+                        return "Please enter new Role ID".brightRed;
+                    } 
+                        return true; 
+                },
             }
         ]).then((data) => {
             connection.query("UPDATE employee SET role_id = ? WHERE employee_id = ?", [data.newRoleId, empId], (err, res) => {
@@ -398,11 +500,38 @@ const updateEmployeeRoleId = (empId) => {
             });
             connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
                 if (err) throw err;
-                console.log("Updated employee information");
+                console.log("Updated employee information".green);
                 console.table(res);
                 updateAgain();      
     });
-})}
+})};
+
+const updateEmployeeManagerId = (empId) => {
+    inquirer.prompt([
+        {
+            type:'input',
+            name: "newManagerId",
+            message: 'What new Manager ID would you like to assign?',
+            validate: (data) => {
+                const number = data.match(/^[1-9]\d*$/);
+                if (data === "" || data != number){
+                    return "Please enter new Manager ID".brightRed;
+                } 
+                    return true; 
+            },
+        }
+    ]).then((data) => {
+        connection.query("UPDATE employee SET manager_id = ? WHERE employee_id = ?", [data.newManagerId, empId], (err, res) => {
+            if (err) throw err;
+        });
+        connection.query("SELECT * FROM employee WHERE employee_id = ?", [empId], (err,res) => {
+            if (err) throw err;
+            console.log("Updated employee information".green);
+            console.table(res);
+            updateAgain();      
+});
+});
+};
 
 const updateAgain = () => {
     inquirer.prompt([
@@ -418,12 +547,103 @@ const updateAgain = () => {
         } else if (data.updateAgain === "Back to the main menu") {
             employeeTracker();
         } else {
-            console.log("Database has been updated.")
+            console.log("Database has been updated.".green)
             connection.end();
             return;  
         }
     })
+};
+
+const deleteDepartment = () => {
+    connection.query("SELECT * FROM department", (err, res) => {
+        if (err) throw err;
+        if (res.length < 1) {
+            console.log("There are no departments to delete.".green);
+            employeeTracker();
+        } else {
+        console.log("These are the current departments.".green);
+        console.table(res);
+        let departmentsArray = res.map((el) => {
+            return el.name;
+        });
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'departmentName',
+                message: "Which department would you like to delete?",
+                choices: departmentsArray
+            }
+        ]).then((data) => {
+            connection.query("DELETE FROM department WHERE name= ?", [data.departmentName], (err, res) => {
+                if (err) throw err;
+                console.log(`${data.departmentName} has been deleted`.green);
+                employeeTracker();
+            });
+        });
+    }});
+    
 }
+
+const deleteRole = () => {
+    connection.query("SELECT * FROM role", (err, res) => {
+        if (err) throw err;
+        if (res.length < 1){
+            console.log("There are no roles to delete.".green);
+            employeeTracker();
+        } else {
+        console.log("These are the current roles.".green);
+        console.table(res);
+        let rolesArray = res.map((el) => {
+            return el.title;
+        });
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'roleTitle',
+                message: "Which department would you like to delete?",
+                choices: rolesArray
+            }
+        ]).then((data) => {
+            connection.query("DELETE FROM role WHERE title= ?", [data.roleTitle], (err, res) => {
+                if (err) throw err;
+                console.log(`${data.roleTitle} has been deleted`.green);
+                employeeTracker();
+            });
+        });
+    }});
+    
+}
+
+const deleteEmployee = () => {
+    connection.query("SELECT * FROM employee", (err, res) => {
+        if (err) throw err;
+        if (res.length < 1){
+            console.log("There are no employees to delete.".green);
+            employeeTracker();
+        } else {
+        console.log("These are the current employees.".green);
+        console.table(res);
+        let employeesArray = res.map((el) => {
+            return el.employee_id;
+        });
+        console.log("Please use the above table to find the corresponding employee.".green)
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'employeeId',
+                message: "Which employee would you like to delete?",
+                choices: employeesArray
+            }
+        ]).then((data) => {
+            connection.query("DELETE FROM employee WHERE employee_id= ?", [data.employeeId], (err, res) => {
+                if (err) throw err;
+                console.log(`Employee with ID#: "${data.employeeId}" has been deleted.`.green);
+                employeeTracker();
+            });
+        });
+    }});
+    
+};
 
 
 employeeTracker();
